@@ -87,6 +87,7 @@ current_model_config = {
     ],
 }
 
+
 def _fix_incomplete_model_cache():
     """Auto-fix incomplete HuggingFace model cache at startup."""
     from huggingface_hub import HfFolder, snapshot_download
@@ -125,7 +126,7 @@ def _fix_incomplete_model_cache():
         if not missing:
             return  # cache is complete
 
-        print(f"\n[WARN] Incomplete model cache detected!")
+        print("\n[WARN] Incomplete model cache detected!")
         print(f"  Missing in speech_tokenizer/: {', '.join(missing)}")
 
         # Clean old broken cache completely
@@ -197,7 +198,7 @@ def _fix_incomplete_model_cache():
             for attempt in range(3):
                 try:
                     print(f"  Downloading {f} (attempt {attempt + 1}/3)...")
-                    local_path = hf_hub_download(
+                    _ = hf_hub_download(
                         repo_id=model_path,
                         filename=f"speech_tokenizer/{f}",
                         token=token,
