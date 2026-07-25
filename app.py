@@ -132,6 +132,7 @@ def _fix_incomplete_model_cache():
         # Clean old broken cache completely
         print("[INFO] Removing broken cache...")
         import shutil
+
         shutil.rmtree(cache_path)
         print("[OK] Old cache removed.")
     else:
@@ -173,12 +174,15 @@ def _fix_incomplete_model_cache():
             print(f"  [WARN] Attempt {attempt + 1} failed: {e}")
             if attempt < 2:
                 import time
+
                 time.sleep(2)
 
     if not downloaded_dir:
         print("[ERROR] All download attempts failed.")
         print("[INFO] Please run manually:")
-        print(f"  huggingface-cli download {model_path} --local-dir hf_cache/hub/models--{repo_dir}")
+        print(
+            f"  huggingface-cli download {model_path} --local-dir hf_cache/hub/models--{repo_dir}"
+        )
         return
 
     # Verify all required files exist
@@ -209,6 +213,7 @@ def _fix_incomplete_model_cache():
                     print(f"  [WARN] Failed: {e}")
                     if attempt < 2:
                         import time
+
                         time.sleep(2)
     else:
         print("[OK] All required files verified!")
