@@ -211,7 +211,7 @@ if torch.cuda.is_available():
     DEVICE = "cuda"
     GPU_TYPE = "nvidia"
     DTYPE = torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16
-    print(f"[OK] Using CUDA GPU")
+    print("[OK] Using CUDA GPU")
     for i in range(torch.cuda.device_count()):
         print(f"  GPU {i}: {torch.cuda.get_device_name(i)}")
 else:
