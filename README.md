@@ -77,9 +77,9 @@ Navigate to **http://localhost:5000** in your browser.
 
 
 ### DEMO Audio
-[Uncle_Fu-DEMO.wav](https://gabalpha.github.io/read-audio/?p=https://github.com/user-attachments/files/30366876/Uncle_Fu-DEMO.wav)
+[Uncle_Fu-DEMO.wav](https://github.com/user-attachments/files/30366876/Uncle_Fu-DEMO.wav)
 
-[Serena-DEMO.wav](https://gabalpha.github.io/read-audio/?p=https://github.com/user-attachments/files/30366877/Serena-DEMO.wav)
+[Serena-DEMO.wav](https://github.com/user-attachments/files/30366877/Serena-DEMO.wav)
 
 
 
