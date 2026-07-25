@@ -30,7 +30,6 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 os.environ["HF_HOME"] = HF_CACHE_DIR
 
 
-
 app = Flask(__name__)
 CORS(app)
 
