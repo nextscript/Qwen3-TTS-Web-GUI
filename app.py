@@ -157,9 +157,7 @@ def _fix_incomplete_model_cache():
     if not downloaded_dir:
         print("[ERROR] All download attempts failed.")
         print("[INFO] Please run manually:")
-        print(
-            f"  huggingface-cli download {model_path} --local-dir hf_cache/hub/models--{repo_dir}"
-        )
+        print(f"  huggingface-cli download {model_path} --local-dir hf_cache/hub/models--{repo_dir}")
         return
 
     # Verify all required files exist
@@ -211,14 +209,13 @@ else:
     # Check for Vulkan support (AMD/Intel GPUs)
     try:
         import torch.vulkan
-        if hasattr(torch.vulkan, 'is_available') and torch.vulkan.is_available():
+
+        if hasattr(torch.vulkan, "is_available") and torch.vulkan.is_available():
             # Try to detect AMD vs Intel
             try:
                 import subprocess
-                result = subprocess.run(
-                    ["vulkaninfo", "--summary"],
-                    capture_output=True, text=True, timeout=5
-                )
+
+                result = subprocess.run(["vulkaninfo", "--summary"], capture_output=True, text=True, timeout=5)
                 if "AMD" in result.stdout:
                     DEVICE = "vulkan"
                     GPU_TYPE = "amd"
@@ -417,15 +414,9 @@ def get_history():
                     )
 
     # Clean up history.json: remove entries for files that no longer exist
-    cleaned_data = [
-        e
-        for e in history_data
-        if os.path.exists(os.path.join(OUTPUT_DIR, e.get("filename", "")))
-    ]
+    cleaned_data = [e for e in history_data if os.path.exists(os.path.join(OUTPUT_DIR, e.get("filename", "")))]
     if len(cleaned_data) != len(history_data):
-        print(
-            f"[INFO] history.json cleaned: {len(history_data) - len(cleaned_data)} stale entries removed"
-        )
+        print(f"[INFO] history.json cleaned: {len(history_data) - len(cleaned_data)} stale entries removed")
 
         with open(history_file, "w", encoding="utf-8") as f:
             json.dump(cleaned_data, f, ensure_ascii=False, indent=2)
@@ -471,9 +462,7 @@ def delete_audio(filename):
             with open(history_file, "r", encoding="utf-8") as f:
                 history_data = json.load(f)
 
-            history_data = [
-                entry for entry in history_data if entry.get("filename") != filename
-            ]
+            history_data = [entry for entry in history_data if entry.get("filename") != filename]
 
             with open(history_file, "w", encoding="utf-8") as f:
                 json.dump(history_data, f, ensure_ascii=False, indent=2)

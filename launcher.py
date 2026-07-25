@@ -17,8 +17,16 @@ def has_nvidia_gpu():
     if os.name == "nt":
         try:
             result = subprocess.run(
-                ["reg", "query", r"HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Class\{4D36E968-E325-11CE-BFC1-08002BE10316}\0000", "/v", "DriverDesc"],
-                capture_output=True, text=True, timeout=5
+                [
+                    "reg",
+                    "query",
+                    r"HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Class\{4D36E968-E325-11CE-BFC1-08002BE10316}\0000",
+                    "/v",
+                    "DriverDesc",
+                ],
+                capture_output=True,
+                text=True,
+                timeout=5,
             )
             if "NVIDIA" in result.stdout:
                 return True
@@ -43,8 +51,17 @@ def has_amd_gpu():
         # Windows: check Device Manager registry for AMD GPUs
         try:
             result = subprocess.run(
-                ["reg", "query", r"HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Class\{4D36E968-E325-11CE-BFC1-08002BE10316}", "/s", "/v", "DriverDesc"],
-                capture_output=True, text=True, timeout=5
+                [
+                    "reg",
+                    "query",
+                    r"HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Class\{4D36E968-E325-11CE-BFC1-08002BE10316}",
+                    "/s",
+                    "/v",
+                    "DriverDesc",
+                ],
+                capture_output=True,
+                text=True,
+                timeout=5,
             )
             if "AMD" in result.stdout or "Radeon" in result.stdout or "Radeon" in result.stdout:
                 return True
@@ -62,7 +79,11 @@ def has_amd_gpu():
         # Linux: check for AMDGPU
         try:
             result = subprocess.run(["lspci"], capture_output=True, text=True, timeout=5)
-            if "amd" in result.stdout.lower() or "radeon" in result.stdout.lower() or "advanced micro devices" in result.stdout.lower():
+            if (
+                "amd" in result.stdout.lower()
+                or "radeon" in result.stdout.lower()
+                or "advanced micro devices" in result.stdout.lower()
+            ):
                 return True
         except Exception:
             pass
@@ -80,8 +101,16 @@ def has_intel_gpu():
     if os.name == "nt":
         try:
             result = subprocess.run(
-                ["reg", "query", r"HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Class\{4D36E968-E325-11CE-BFC1-08002BE10316}\0000", "/v", "DriverDesc"],
-                capture_output=True, text=True, timeout=5
+                [
+                    "reg",
+                    "query",
+                    r"HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Class\{4D36E968-E325-11CE-BFC1-08002BE10316}\0000",
+                    "/v",
+                    "DriverDesc",
+                ],
+                capture_output=True,
+                text=True,
+                timeout=5,
             )
             if "Intel" in result.stdout or "UHD" in result.stdout or "Iris" in result.stdout:
                 return True
@@ -106,13 +135,24 @@ def install_gpu_pytorch(pip_in_venv, gpu_type="nvidia"):
         cuda_index = "https://download.pytorch.org/whl/nightly/cu132"
         result = subprocess.run(
             [pip_in_venv, "install", "--pre", "torch", "torchvision", "torchaudio", "--index-url", cuda_index],
-            capture_output=True, text=True,
+            capture_output=True,
+            text=True,
         )
         if result.returncode != 0:
             print(f"{YELLOW}[WARN]{NC} CUDA 13.2 failed, trying CUDA 12.4...")
             result = subprocess.run(
-                [pip_in_venv, "install", "--pre", "torch", "torchvision", "torchaudio", "--index-url", "https://download.pytorch.org/whl/nightly/cu124"],
-                capture_output=True, text=True,
+                [
+                    pip_in_venv,
+                    "install",
+                    "--pre",
+                    "torch",
+                    "torchvision",
+                    "torchaudio",
+                    "--index-url",
+                    "https://download.pytorch.org/whl/nightly/cu124",
+                ],
+                capture_output=True,
+                text=True,
             )
         if result.returncode == 0:
             print(f"{GREEN}[OK]{NC} CUDA PyTorch installed")
@@ -122,7 +162,8 @@ def install_gpu_pytorch(pip_in_venv, gpu_type="nvidia"):
         # PyTorch 2.6+ has experimental Vulkan support
         result = subprocess.run(
             [pip_in_venv, "install", "torch", "torchvision", "torchaudio"],
-            capture_output=True, text=True,
+            capture_output=True,
+            text=True,
         )
         if result.returncode == 0:
             print(f"{GREEN}[OK]{NC} Vulkan PyTorch installed")
@@ -131,7 +172,8 @@ def install_gpu_pytorch(pip_in_venv, gpu_type="nvidia"):
         print(f"{YELLOW}[GPU-PyTorch]{NC} Installing PyTorch with Intel GPU (Vulkan) support...")
         result = subprocess.run(
             [pip_in_venv, "install", "torch", "torchvision", "torchaudio"],
-            capture_output=True, text=True,
+            capture_output=True,
+            text=True,
         )
         if result.returncode == 0:
             print(f"{GREEN}[OK]{NC} Intel GPU PyTorch installed")
@@ -143,8 +185,17 @@ def install_cpu_pytorch(pip_in_venv):
     """Install CPU-only PyTorch (fast)."""
     print(f"{GREEN}[CPU]{NC} Installing CPU-only PyTorch (fast)...")
     result = subprocess.run(
-        [pip_in_venv, "install", "torch", "torchvision", "torchaudio", "--index-url", "https://download.pytorch.org/whl/cpu"],
-        capture_output=True, text=True,
+        [
+            pip_in_venv,
+            "install",
+            "torch",
+            "torchvision",
+            "torchaudio",
+            "--index-url",
+            "https://download.pytorch.org/whl/cpu",
+        ],
+        capture_output=True,
+        text=True,
     )
     if result.returncode == 0:
         print(f"{GREEN}[OK]{NC} CPU PyTorch installed")
@@ -153,7 +204,8 @@ def install_cpu_pytorch(pip_in_venv):
         print(f"{YELLOW}[WARN]{NC} CPU index failed, using default...")
         result = subprocess.run(
             [pip_in_venv, "install", "torch", "torchvision", "torchaudio"],
-            capture_output=True, text=True,
+            capture_output=True,
+            text=True,
         )
         if result.returncode == 0:
             print(f"{GREEN}[OK]{NC} PyTorch installed")
@@ -206,9 +258,7 @@ def main():
 
     # Install other requirements
     print(f"{YELLOW}[3/4]{NC} Installing dependencies...")
-    result = subprocess.run(
-        [pip_in_venv, "install", "-r", req_file], capture_output=True, text=True
-    )
+    result = subprocess.run([pip_in_venv, "install", "-r", req_file], capture_output=True, text=True)
     if result.returncode != 0:
         print(f"{RED}[ERROR]{NC} Installation failed:")
         print(result.stderr)
