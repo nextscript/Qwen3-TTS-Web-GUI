@@ -44,9 +44,26 @@ pip install -r requirements.txt
 if errorlevel 1 (
     echo.
     echo [WARNING] Installation failed. Trying individual packages...
-    pip install flask flask-cors torch torchaudio qwen-tts soundfile transformers accelerate sentencepiece
+    pip install flask flask-cors qwen-tts soundfile transformers accelerate sentencepiece
 )
-echo [3/4] Dependencies ready
+echo [OK] Dependencies installed
+echo.
+
+:: Install GPU PyTorch (always, to ensure CUDA support)
+echo [3/4] Installing GPU PyTorch...
+echo [INFO] Uninstalling existing PyTorch...
+pip uninstall -y torch torchvision torchaudio >nul 2>&1
+echo [INFO] Installing CUDA PyTorch...
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124 >nul 2>&1
+if errorlevel 1 (
+    echo [WARN] CUDA PyTorch failed, trying default...
+    pip install torch torchvision torchaudio >nul 2>&1
+    if errorlevel 1 (
+        echo [WARN] PyTorch install failed, trying CPU version...
+        pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu >nul 2>&1
+    )
+)
+echo [OK] PyTorch installed
 echo.
 
 echo [4/4] Starting server...

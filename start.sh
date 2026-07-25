@@ -46,7 +46,7 @@ if [ ! -f "requirements.txt" ]; then
     exit 1
 fi
 
-# Check if requirements are already installed
+# Install requirements first (flask, etc.)
 MISSING=$(pip check 2>/dev/null || true)
 if [ -z "$MISSING" ]; then
     echo -e "${GREEN}[OK]${NC} All dependencies already installed"
@@ -55,13 +55,27 @@ else
     if [ $? -ne 0 ]; then
         echo -e "${YELLOW}[WARNING]${NC} Some packages could not be installed automatically."
         echo "Trying manually..."
-        pip install flask flask-cors torch torchaudio qwen-tts soundfile transformers accelerate sentencepiece
+        pip install flask flask-cors qwen-tts soundfile transformers accelerate sentencepiece
     fi
     echo -e "${GREEN}[OK]${NC} Dependencies installed"
 fi
 echo
 
-echo -e "${YELLOW}[3/4]${NC} Dependencies ready"
+# Install GPU PyTorch (always, to ensure CUDA support)
+echo -e "${YELLOW}[3/4]${NC} Installing GPU PyTorch..."
+echo -e "${YELLOW}[INFO]${NC} Uninstalling existing PyTorch..."
+pip uninstall -y torch torchvision torchaudio --quiet 2>/dev/null || true
+echo -e "${YELLOW}[INFO]${NC} Installing CUDA PyTorch..."
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124 --quiet 2>/dev/null
+if [ $? -ne 0 ]; then
+    echo -e "${YELLOW}[WARN]${NC} CUDA PyTorch failed, trying default..."
+    pip install torch torchvision torchaudio --quiet 2>/dev/null
+    if [ $? -ne 0 ]; then
+        echo -e "${YELLOW}[WARN]${NC} PyTorch install failed, trying CPU version..."
+        pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu --quiet 2>/dev/null
+    fi
+fi
+echo -e "${GREEN}[OK]${NC} PyTorch installed"
 echo
 
 echo -e "${YELLOW}[4/4]${NC} Starting server..."
