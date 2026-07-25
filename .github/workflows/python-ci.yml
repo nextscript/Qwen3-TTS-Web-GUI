@@ -35,7 +35,7 @@ jobs:
         shell: bash
         run: |
           flake8 --max-line-length=120 --ignore=E501,W503 .
-          black --check --diff --line-ending lf .
+          black --check --diff .
 
       - name: Check import sorting
         shell: bash
