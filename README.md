@@ -1,3 +1,5 @@
+<img src="https://raw.githubusercontent.com/nextscript/Qwen3-TTS-Web-GUI/refs/heads/main/screenshot.png">
+
 # Qwen3-TTS Web GUI
 
 A web-based text-to-speech application powered by [Qwen3-TTS](https://huggingface.co/Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice) with GPU acceleration.
