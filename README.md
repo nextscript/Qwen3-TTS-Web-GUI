@@ -82,9 +82,6 @@ Navigate to **http://localhost:5000** in your browser.
 [Serena-DEMO.wav](https://github.com/user-attachments/files/30366877/Serena-DEMO.wav)
 
 
-
-Instructions must be written as complete sentences.
-
 ## Project Structure
 
 ```
