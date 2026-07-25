@@ -65,14 +65,18 @@ echo
 echo -e "${YELLOW}[3/4]${NC} Installing GPU PyTorch..."
 echo -e "${YELLOW}[INFO]${NC} Uninstalling existing PyTorch..."
 pip uninstall -y torch torchvision torchaudio --quiet 2>/dev/null || true
-echo -e "${YELLOW}[INFO]${NC} Installing CUDA PyTorch..."
-pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124 --quiet 2>/dev/null
+echo -e "${YELLOW}[INFO]${NC} Installing CUDA PyTorch (nightly for RTX 50xx support)..."
+pip install --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/cu132 --quiet 2>/dev/null
 if [ $? -ne 0 ]; then
-    echo -e "${YELLOW}[WARN]${NC} CUDA PyTorch failed, trying default..."
-    pip install torch torchvision torchaudio --quiet 2>/dev/null
+    echo -e "${YELLOW}[WARN]${NC} CUDA 13.2 nightly failed, trying CUDA 12.4 nightly..."
+    pip install --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/cu124 --quiet 2>/dev/null
     if [ $? -ne 0 ]; then
-        echo -e "${YELLOW}[WARN]${NC} PyTorch install failed, trying CPU version..."
-        pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu --quiet 2>/dev/null
+        echo -e "${YELLOW}[WARN]${NC} Nightly CUDA failed, trying stable CUDA 12.4..."
+        pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124 --quiet 2>/dev/null
+        if [ $? -ne 0 ]; then
+            echo -e "${YELLOW}[WARN]${NC} CUDA PyTorch failed, trying CPU version..."
+            pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu --quiet 2>/dev/null
+        fi
     fi
 fi
 echo -e "${GREEN}[OK]${NC} PyTorch installed"

@@ -16,12 +16,13 @@ def install_gpu_pytorch(pip_in_venv):
     """Install PyTorch with CUDA GPU support."""
     print(f"{YELLOW}[GPU-PyTorch]{NC} Installing PyTorch with CUDA support...")
 
-    # Try CUDA 12.4 (stable, widely supported)
-    cuda_index = "https://download.pytorch.org/whl/cu124"
+    # Try nightly CUDA 13.2 first (supports Blackwell/sm_120 RTX 50xx)
+    cuda_index = "https://download.pytorch.org/whl/nightly/cu132"
     result = subprocess.run(
         [
             pip_in_venv,
             "install",
+            "--pre",
             "torch",
             "torchvision",
             "torchaudio",
@@ -33,9 +34,35 @@ def install_gpu_pytorch(pip_in_venv):
     )
 
     if result.returncode != 0:
-        print(f"{YELLOW}[WARN]{NC} CUDA 12.4 failed, trying default PyTorch...")
+        print(f"{YELLOW}[WARN]{NC} CUDA 13.2 nightly failed, trying CUDA 12.4 nightly...")
+        # Fallback to CUDA 12.4 nightly (supports up to sm_90)
         result = subprocess.run(
-            [pip_in_venv, "install", "torch", "torchvision", "torchaudio"],
+            [
+                pip_in_venv,
+                "install",
+                "--pre",
+                "torch",
+                "torchvision",
+                "torchaudio",
+                "--index-url",
+                "https://download.pytorch.org/whl/nightly/cu124",
+            ],
+            capture_output=True,
+            text=True,
+        )
+
+    if result.returncode != 0:
+        print(f"{YELLOW}[WARN]{NC} Nightly CUDA failed, trying stable CUDA 12.4...")
+        result = subprocess.run(
+            [
+                pip_in_venv,
+                "install",
+                "torch",
+                "torchvision",
+                "torchaudio",
+                "--index-url",
+                "https://download.pytorch.org/whl/cu124",
+            ],
             capture_output=True,
             text=True,
         )
