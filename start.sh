@@ -18,48 +18,57 @@ echo
 
 # Check Python
 if ! command -v python3 &> /dev/null; then
-    echo -e "${RED}[Fehler] Python3 ist nicht installiert.${NC}"
-    echo "Bitte installiere Python 3.10+ von https://www.python.org/"
+    echo -e "${RED}[ERROR] Python3 is not installed.${NC}"
+    echo "Please install Python 3.10+ from https://www.python.org/"
     exit 1
 fi
 
-echo -e "${GREEN}[OK]${NC} Python3 gefunden: $(python3 --version 2>&1)"
+echo -e "${GREEN}[OK]${NC} Python3 found: $(python3 --version 2>&1)"
 echo
 
 # Check/create virtual environment
 if [ ! -d "venv" ]; then
-    echo -e "${YELLOW}[1/3]${NC} Virtuelle Umgebung wird erstellt..."
+    echo -e "${YELLOW}[1/4]${NC} Creating virtual environment..."
     python3 -m venv venv
-    echo -e "${GREEN}[OK]${NC} Virtuelle Umgebung erstellt"
+    echo -e "${GREEN}[OK]${NC} Virtual environment created"
 else
-    echo -e "${GREEN}[OK]${NC} Virtuelle Umgebung vorhanden"
+    echo -e "${GREEN}[OK]${NC} Virtual environment already exists"
 fi
 echo
 
 # Activate venv
-echo -e "${YELLOW}[2/3]${NC} Abhängigkeiten werden installiert..."
+echo -e "${YELLOW}[2/4]${NC} Installing dependencies..."
 source venv/bin/activate
 
-# Install requirements
+# Check requirements.txt
 if [ ! -f "requirements.txt" ]; then
-    echo -e "${RED}[Fehler] requirements.txt nicht gefunden!${NC}"
+    echo -e "${RED}[ERROR] requirements.txt not found!${NC}"
     exit 1
 fi
 
-pip install -r requirements.txt --quiet 2>/dev/null
-if [ $? -ne 0 ]; then
-    echo -e "${YELLOW}[Warnung]${NC} Einige Pakete konnten nicht automatisch installiert werden."
-    echo "Versuche manuell..."
-    pip install flask flask-cors torch torchaudio qwen-tts soundfile transformers accelerate sentencepiece
+# Check if requirements are already installed
+MISSING=$(pip check 2>/dev/null || true)
+if [ -z "$MISSING" ]; then
+    echo -e "${GREEN}[OK]${NC} All dependencies already installed"
+else
+    pip install -r requirements.txt --quiet 2>/dev/null
+    if [ $? -ne 0 ]; then
+        echo -e "${YELLOW}[WARNING]${NC} Some packages could not be installed automatically."
+        echo "Trying manually..."
+        pip install flask flask-cors torch torchaudio qwen-tts soundfile transformers accelerate sentencepiece
+    fi
+    echo -e "${GREEN}[OK]${NC} Dependencies installed"
 fi
-echo -e "${GREEN}[OK]${NC} Abhängigkeiten installiert"
 echo
 
-echo -e "${YELLOW}[3/3]${NC} Starte Server..."
+echo -e "${YELLOW}[3/4]${NC} Dependencies ready"
+echo
+
+echo -e "${YELLOW}[4/4]${NC} Starting server..."
 echo
 echo -e "${CYAN}============================================================${NC}"
-echo -e "${CYAN}  Web-GUI ist unter http://localhost:5000 erreichbar${NC}"
-echo -e "${CYAN}  Drücke STRG+C zum Beenden${NC}"
+echo -e "${CYAN}  Web-GUI: http://localhost:5000${NC}"
+echo -e "${CYAN}  Press CTRL+C to stop${NC}"
 echo -e "${CYAN}============================================================${NC}"
 echo
 
