@@ -1,0 +1,22 @@
+# Qwen3-TTS Web GUI Dependencies
+# ⚠️ PyTorch mit GPU wird automatisch in launcher.py installiert!
+
+# Web Framework
+flask>=3.0
+flask-cors>=4.0
+
+# HTTP Client
+requests>=2.31
+
+# TTS Engine
+qwen-tts
+
+# Audio Processing
+soundfile>=0.12
+
+# ML Infrastructure
+transformers>=4.44
+accelerate>=0.33
+
+# Tokenizer
+sentencepiece>=0.2

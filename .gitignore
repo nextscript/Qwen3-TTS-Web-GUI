@@ -1,0 +1,44 @@
+# Virtual environment
+venv/
+.venv/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+*.egg
+
+# HuggingFace cache
+hf_cache/
+
+# Output directory
+output/
+
+# Environment
+.env
+.env.*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Screenshots / large media
+*.png
+*.jpg
+*.jpeg
+*.gif
+
+# Logs
+*.log
+
+# Temporary
+tmp/
+temp/
