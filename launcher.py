@@ -109,6 +109,10 @@ def main():
 
     # Always install GPU PyTorch first - it auto-detects GPU at runtime
     print(f"{YELLOW}[2/4]{NC} Installing PyTorch...")
+    # Force reinstall GPU PyTorch to ensure CUDA version is used
+    print(f"{YELLOW}[INFO]{NC} Uninstalling existing PyTorch...")
+    subprocess.run([pip_in_venv, "uninstall", "-y", "torch", "torchvision", "torchaudio"], capture_output=True)
+    print(f"{YELLOW}[INFO]{NC} Installing GPU PyTorch...")
     installed_gpu = install_gpu_pytorch(pip_in_venv)
     if not installed_gpu:
         print(f"{YELLOW}[WARN]{NC} GPU PyTorch failed, falling back to CPU...")

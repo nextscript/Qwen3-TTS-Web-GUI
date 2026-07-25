@@ -201,10 +201,19 @@ GPU_TYPE = None  # "nvidia", "amd", "intel", or None
 DEVICE = "cpu"
 DTYPE = torch.float16
 
+print(f"[DEBUG] PyTorch version: {torch.__version__}")
+print(f"[DEBUG] CUDA available: {torch.cuda.is_available()}")
+print(f"[DEBUG] CUDA version: {torch.version.cuda}")
+print(f"[DEBUG] cuDNN version: {torch.backends.cudnn.version()}")
+print(f"[DEBUG] Number of GPUs: {torch.cuda.device_count()}")
+
 if torch.cuda.is_available():
     DEVICE = "cuda"
     GPU_TYPE = "nvidia"
     DTYPE = torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16
+    print(f"[OK] Using CUDA GPU")
+    for i in range(torch.cuda.device_count()):
+        print(f"  GPU {i}: {torch.cuda.get_device_name(i)}")
 else:
     # Check for Vulkan support (AMD/Intel GPUs)
     try:
@@ -226,6 +235,7 @@ else:
                 DEVICE = "vulkan"
                 GPU_TYPE = "intel"
             DTYPE = torch.float16  # Vulkan typically uses fp16
+            print(f"[OK] Using Vulkan GPU ({GPU_TYPE})")
     except Exception:
         pass
 
