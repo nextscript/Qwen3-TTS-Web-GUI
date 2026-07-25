@@ -87,6 +87,132 @@ current_model_config = {
     ],
 }
 
+def _fix_incomplete_model_cache():
+    """Auto-fix incomplete HuggingFace model cache at startup."""
+    from huggingface_hub import HfFolder, snapshot_download
+
+    model_path = current_model_config["path"]
+    # Derive cache dir name from repo id (replace / with --)
+    repo_dir = model_path.replace("/", "--")
+    cache_path = os.path.join(HF_CACHE_DIR, "hub", f"models--{repo_dir}")
+    snapshots_dir = os.path.join(cache_path, "snapshots")
+
+    # Required files for speech_tokenizer
+    required_files = [
+        "config.json",
+        "configuration.json",
+        "model.safetensors",
+        "preprocessor_config.json",
+    ]
+
+    # Find snapshot directory and check files
+    snapshot_dir = None
+    if os.path.exists(snapshots_dir):
+        for item in os.listdir(snapshots_dir):
+            full = os.path.join(snapshots_dir, item)
+            if os.path.isdir(full):
+                snapshot_dir = full
+                break
+
+    if snapshot_dir:
+        speech_tok_dir = os.path.join(snapshot_dir, "speech_tokenizer")
+        missing = []
+        for f in required_files:
+            path = os.path.join(speech_tok_dir, f)
+            if not os.path.exists(path):
+                missing.append(f)
+
+        if not missing:
+            return  # cache is complete
+
+        print(f"\n[WARN] Incomplete model cache detected!")
+        print(f"  Missing in speech_tokenizer/: {', '.join(missing)}")
+
+        # Clean old broken cache completely
+        print("[INFO] Removing broken cache...")
+        import shutil
+        shutil.rmtree(cache_path)
+        print("[OK] Old cache removed.")
+    else:
+        print("[INFO] No cached model found — will download on first use.")
+
+    # Get token (optional for public repos)
+    token = HfFolder.get_token()
+    if not token:
+        print("\n[INFO] HuggingFace token required for model download.")
+        print("=" * 60)
+        token_input = input("  Enter HuggingFace token: ").strip()
+        if not token_input:
+            print("[WARN] No token entered. Please run:")
+            print("  huggingface-cli login")
+            print("  Then restart the app.")
+            return
+        try:
+            HfFolder.save_token(token_input)
+            print("[OK] Token saved.")
+        except Exception as e:
+            print(f"[ERROR] Could not save token: {e}")
+            return
+        token = token_input
+
+    # Download the model (no local_dir - use default cache in HF_HOME)
+    print("[INFO] Downloading complete model repo...")
+    downloaded_dir = None
+    for attempt in range(3):
+        try:
+            print(f"  Attempt {attempt + 1}/3...")
+            downloaded_dir = snapshot_download(
+                repo_id=model_path,
+                token=token,
+                max_workers=4,
+            )
+            print("[OK] Download completed.")
+            break
+        except Exception as e:
+            print(f"  [WARN] Attempt {attempt + 1} failed: {e}")
+            if attempt < 2:
+                import time
+                time.sleep(2)
+
+    if not downloaded_dir:
+        print("[ERROR] All download attempts failed.")
+        print("[INFO] Please run manually:")
+        print(f"  huggingface-cli download {model_path} --local-dir hf_cache/hub/models--{repo_dir}")
+        return
+
+    # Verify all required files exist
+    new_speech_tok = os.path.join(downloaded_dir, "speech_tokenizer")
+    remaining_missing = []
+    for f in required_files:
+        path = os.path.join(new_speech_tok, f)
+        if not os.path.exists(path):
+            remaining_missing.append(f)
+
+    if remaining_missing:
+        print(f"\n[WARN] Still missing after download: {', '.join(remaining_missing)}")
+        print("[INFO] Trying individual file download...")
+        from huggingface_hub import hf_hub_download
+
+        for f in remaining_missing:
+            for attempt in range(3):
+                try:
+                    print(f"  Downloading {f} (attempt {attempt + 1}/3)...")
+                    local_path = hf_hub_download(
+                        repo_id=model_path,
+                        filename=f"speech_tokenizer/{f}",
+                        token=token,
+                    )
+                    print(f"  [OK] Downloaded: {f}")
+                    break
+                except Exception as e:
+                    print(f"  [WARN] Failed: {e}")
+                    if attempt < 2:
+                        import time
+                        time.sleep(2)
+    else:
+        print("[OK] All required files verified!")
+
+
 model = None
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 DTYPE = (
@@ -362,4 +488,8 @@ if __name__ == "__main__":
     print(f"  Dtype: {DTYPE}")
     print("=" * 60)
     print()
+
+    # Auto-fix incomplete model cache
+    _fix_incomplete_model_cache()
+
     app.run(host="0.0.0.0", port=5000, debug=True)
