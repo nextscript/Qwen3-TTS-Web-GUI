@@ -75,6 +75,14 @@ Navigate to **http://localhost:5000** in your browser.
 | `speak slowly` | Slow speech rate |
 | `speak quickly` | Fast speech rate |
 
+
+### DEMO Audio
+[Uncle_Fu-DEMO.wav](https://gabalpha.github.io/read-audio/?p=https://github.com/user-attachments/files/30366876/Uncle_Fu-DEMO.wav)
+
+[Serena-DEMO.wav](https://gabalpha.github.io/read-audio/?p=https://github.com/user-attachments/files/30366877/Serena-DEMO.wav)
+
+
+
 Instructions must be written as complete sentences.
 
 ## Project Structure
