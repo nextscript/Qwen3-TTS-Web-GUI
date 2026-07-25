@@ -34,7 +34,7 @@ jobs:
       - name: Run linter
         shell: bash
         run: |
-          flake8 --max-line-length=120 --ignore=E501 .
+          flake8 --max-line-length=120 --ignore=E501,W503 .
           black --check --diff .
 
       - name: Check import sorting
