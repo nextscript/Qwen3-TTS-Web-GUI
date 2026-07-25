@@ -29,29 +29,7 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 # Set HF_HOME before any huggingface imports
 os.environ["HF_HOME"] = HF_CACHE_DIR
 
-# Remove old cache in user home if it exists
-old_cache = os.path.expanduser("~/.cache/huggingface/hub")
-if os.path.exists(old_cache):
-    try:
-        import shutil
 
-        print(f"\n[INFO] Removing old HuggingFace cache: {old_cache}")
-        shutil.rmtree(old_cache)
-        print("[OK] Old cache removed")
-    except Exception as e:
-        print(f"[WARN] Could not remove old cache: {e}")
-
-# Also remove old transformers cache
-old_transformers_cache = os.path.expanduser("~/.cache/huggingface/transformers")
-if os.path.exists(old_transformers_cache):
-    try:
-        import shutil
-
-        print(f"\n[INFO] Removing old transformers cache: {old_transformers_cache}")
-        shutil.rmtree(old_transformers_cache)
-        print("[OK] old transformers cache removed")
-    except Exception as e:
-        print(f"[WARN] Could not remove old transformers cache: {e}")
 
 app = Flask(__name__)
 CORS(app)
@@ -220,12 +198,45 @@ def _fix_incomplete_model_cache():
 
 
 model = None
-DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-DTYPE = (
-    torch.bfloat16
-    if torch.cuda.is_available() and torch.cuda.is_bf16_supported()
-    else torch.float16
-)
+
+# Detect GPU type and set appropriate device
+GPU_TYPE = None  # "nvidia", "amd", "intel", or None
+DEVICE = "cpu"
+DTYPE = torch.float16
+
+if torch.cuda.is_available():
+    DEVICE = "cuda"
+    GPU_TYPE = "nvidia"
+    DTYPE = torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16
+else:
+    # Check for Vulkan support (AMD/Intel GPUs)
+    try:
+        import torch.vulkan
+        if hasattr(torch.vulkan, 'is_available') and torch.vulkan.is_available():
+            # Try to detect AMD vs Intel
+            try:
+                import subprocess
+                result = subprocess.run(
+                    ["vulkaninfo", "--summary"],
+                    capture_output=True, text=True, timeout=5
+                )
+                if "AMD" in result.stdout:
+                    DEVICE = "vulkan"
+                    GPU_TYPE = "amd"
+                else:
+                    DEVICE = "vulkan"
+                    GPU_TYPE = "intel"
+            except Exception:
+                DEVICE = "vulkan"
+                GPU_TYPE = "intel"
+            DTYPE = torch.float16  # Vulkan typically uses fp16
+    except Exception:
+        pass
+
+# Fallback to CPU if no GPU detected
+if DEVICE == "cpu":
+    GPU_TYPE = None
+    print("[INFO] No GPU detected, using CPU")
 
 
 def load_model():
@@ -241,26 +252,26 @@ def load_model():
         print(f"{'=' * 60}\n")
 
         # Load Qwen3-TTS model
+        print(f"[INFO] Using device: {DEVICE} (GPU type: {GPU_TYPE})")
         model = Qwen3TTSModel.from_pretrained(
             model_path,
             device_map=DEVICE,
             dtype=DTYPE,
             cache_dir=HF_CACHE_DIR,
             local_files_only=False,
-            attn_implementation="sdpa" if torch.cuda.is_available() else None,
+            attn_implementation="sdpa" if GPU_TYPE else None,
         )
         print("Model loaded successfully!")
 
         # Compile the model for faster inference
-        if torch.cuda.is_available():
+        if GPU_TYPE:
             try:
-                # Compile the forward pass
                 model.model.forward = torch.compile(
                     model.model.forward,
                     mode="reduce-overhead",
                     fullgraph=True,
                 )
-                print("[OK] torch.compile enabled for model.forward")
+                print(f"[OK] torch.compile enabled for {GPU_TYPE} GPU")
             except Exception as e:
                 print(f"[WARN] torch.compile failed: {e}")
     return model
@@ -490,7 +501,7 @@ if __name__ == "__main__":
     print("=" * 60)
     print(f"  Model: {current_model_config['path']}")
     print(f"  HF_HOME: {os.environ.get('HF_HOME', 'NOT SET')}")
-    print(f"  Device: {DEVICE}")
+    print(f"  Device: {DEVICE} ({GPU_TYPE or 'CPU'})")
     print(f"  Dtype: {DTYPE}")
     print("=" * 60)
     print()
