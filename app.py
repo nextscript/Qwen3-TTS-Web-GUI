@@ -3,18 +3,18 @@ Qwen3-TTS Web GUI Backend
 Flask server for text-to-speech with model marketplace
 """
 
-import io
-import os
-import sys
-import json
 import base64
-import uuid
+import io
+import json
+import os
 import time
+import uuid
+
+import soundfile as sf
 import torch
-from flask import Flask, render_template, request, jsonify, send_file
+from flask import Flask, jsonify, render_template, request, send_file
 from flask_cors import CORS
 from qwen_tts import Qwen3TTSModel
-import soundfile as sf
 
 # Redirect ALL HuggingFace caching to project folder
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -34,6 +34,7 @@ old_cache = os.path.expanduser("~/.cache/huggingface/hub")
 if os.path.exists(old_cache):
     try:
         import shutil
+
         print(f"\n[INFO] Removing old HuggingFace cache: {old_cache}")
         shutil.rmtree(old_cache)
         print("[OK] Old cache removed")
@@ -45,9 +46,10 @@ old_transformers_cache = os.path.expanduser("~/.cache/huggingface/transformers")
 if os.path.exists(old_transformers_cache):
     try:
         import shutil
+
         print(f"\n[INFO] Removing old transformers cache: {old_transformers_cache}")
         shutil.rmtree(old_transformers_cache)
-        print("[OK] Old transformers cache removed")
+        print("[OK] old transformers cache removed")
     except Exception as e:
         print(f"[WARN] Could not remove old transformers cache: {e}")
 
@@ -70,12 +72,28 @@ current_model_config = {
         "Ono_Anna": "Playful Japanese female voice, light and nimble (Japanese)",
         "Sohee": "Warm Korean female voice with rich emotion (Korean)",
     },
-    "languages": ["Auto", "Chinese", "English", "Japanese", "Korean", "German", "French", "Russian", "Portuguese", "Spanish", "Italian"],
+    "languages": [
+        "Auto",
+        "Chinese",
+        "English",
+        "Japanese",
+        "Korean",
+        "German",
+        "French",
+        "Russian",
+        "Portuguese",
+        "Spanish",
+        "Italian",
+    ],
 }
 
 model = None
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-DTYPE = torch.bfloat16 if torch.cuda.is_available() and torch.cuda.is_bf16_supported() else torch.float16
+DTYPE = (
+    torch.bfloat16
+    if torch.cuda.is_available() and torch.cuda.is_bf16_supported()
+    else torch.float16
+)
 
 
 def load_model():
@@ -83,13 +101,13 @@ def load_model():
     global model
     if model is None:
         model_path = current_model_config["path"]
-        
-        print(f"\n{'='*60}")
+
+        print(f"\n{'=' * 60}")
         print(f"  Loading model: {model_path}")
         print(f"  HF_HOME: {os.environ.get('HF_HOME', 'NOT SET')}")
         print(f"  Device: {DEVICE}")
-        print(f"{'='*60}\n")
-        
+        print(f"{'=' * 60}\n")
+
         # Load Qwen3-TTS model
         model = Qwen3TTSModel.from_pretrained(
             model_path,
@@ -100,7 +118,7 @@ def load_model():
             attn_implementation="sdpa" if torch.cuda.is_available() else None,
         )
         print("Model loaded successfully!")
-        
+
         # Compile the model for faster inference
         if torch.cuda.is_available():
             try:
@@ -123,7 +141,7 @@ def index():
         speakers=current_model_config["speakers"],
         languages=current_model_config["languages"],
         current_model=current_model_config,
-        hf_cache_dir=HF_CACHE_DIR
+        hf_cache_dir=HF_CACHE_DIR,
     )
 
 
@@ -142,7 +160,7 @@ def generate():
     model = load_model()
 
     # Generate audio (no_grad for speed + memory savings)
-    wav_bytes = None
+    wav_buffer = io.BytesIO()
     with torch.no_grad():
         try:
             # Use language parameter directly (Auto works for auto-detection)
@@ -150,7 +168,7 @@ def generate():
             print(f"Using speaker: {speaker}")
             if instruct:
                 print(f"Using instruction: {instruct}")
-            
+
             wavs, sr = model.generate_custom_voice(
                 text=text,
                 language=language,
@@ -160,13 +178,12 @@ def generate():
         except Exception as e:
             print(f"Error during generation: {e}")
             import traceback
+
             traceback.print_exc()
             return jsonify({"error": f"Generation failed: {str(e)}"}), 500
 
     # Encode WAV bytes directly from numpy array (single write)
-    wav_buffer = io.BytesIO()
     sf.write(wav_buffer, wavs[0] if isinstance(wavs, list) else wavs, sr, format="WAV")
-    wav_bytes = wav_buffer.getvalue()
     wav_buffer.seek(0)
 
     # Save to file
@@ -179,30 +196,35 @@ def generate():
     history_data = []
     if os.path.exists(history_file):
         try:
-            with open(history_file, 'r', encoding='utf-8') as f:
+            with open(history_file, "r", encoding="utf-8") as f:
                 history_data = json.load(f)
         except (json.JSONDecodeError, IOError):
             history_data = []
-    
-    history_data.insert(0, {
-        "filename": filename,
-        "text": text,
-        "speaker": speaker,
-        "language": language,
-        "instruct": instruct,
-        "created": time.time(),
-    })
+
+    history_data.insert(
+        0,
+        {
+            "filename": filename,
+            "text": text,
+            "speaker": speaker,
+            "language": language,
+            "instruct": instruct,
+            "created": time.time(),
+        },
+    )
     # Keep only last 100 entries
     history_data = history_data[:100]
-    
-    with open(history_file, 'w', encoding='utf-8') as f:
+
+    with open(history_file, "w", encoding="utf-8") as f:
         json.dump(history_data, f, ensure_ascii=False, indent=2)
 
-    return jsonify({
-        "audio_wav": base64.b64encode(wav_buffer.read()).decode("utf-8"),
-        "sample_rate": int(sr),
-        "filename": filename,
-    })
+    return jsonify(
+        {
+            "audio_wav": base64.b64encode(wav_buffer.read()).decode("utf-8"),
+            "sample_rate": int(sr),
+            "filename": filename,
+        }
+    )
 
 
 @app.route("/speakers", methods=["GET"])
@@ -222,55 +244,66 @@ def get_history():
     """Get list of generated audio files."""
     files = []
     history_file = os.path.join(OUTPUT_DIR, "history.json")
-    
+
     # Try to load from history.json first
     history_data = []
     if os.path.exists(history_file):
         try:
-            with open(history_file, 'r', encoding='utf-8') as f:
+            with open(history_file, "r", encoding="utf-8") as f:
                 history_data = json.load(f)
         except (json.JSONDecodeError, IOError):
             history_data = []
-    
+
     # If history.json is empty, scan output folder for .wav files
     if not history_data:
         print("[INFO] history.json empty, scanning output/ folder...")
         for f_name in sorted(os.listdir(OUTPUT_DIR), reverse=True):
-            if f_name.endswith('.wav') and f_name != 'history.json':
+            if f_name.endswith(".wav") and f_name != "history.json":
                 filepath = os.path.join(OUTPUT_DIR, f_name)
                 if os.path.isfile(filepath):
                     stat = os.stat(filepath)
-                    name_without_ext = f_name.replace('.wav', '')
-                    parts = name_without_ext.split('_')
-                    speaker = parts[-2] if len(parts) >= 3 else 'Unknown'
-                    history_data.append({
-                        "filename": f_name,
-                        "text": f"{speaker} — Generated on {time.strftime('%Y-%m-%d %H:%M', time.localtime(stat.st_mtime))}",
-                        "speaker": speaker,
-                        "created": stat.st_mtime,
-                    })
-    
+                    name_without_ext = f_name.replace(".wav", "")
+                    parts = name_without_ext.split("_")
+                    speaker = parts[-2] if len(parts) >= 3 else "Unknown"
+                    history_data.append(
+                        {
+                            "filename": f_name,
+                            "text": f"{speaker} -- Generated on {time.strftime('%Y-%m-%d %H:%M', time.localtime(stat.st_mtime))}",
+                            "speaker": speaker,
+                            "created": stat.st_mtime,
+                        }
+                    )
+
     # Clean up history.json: remove entries for files that no longer exist
-    cleaned_data = [e for e in history_data if os.path.exists(os.path.join(OUTPUT_DIR, e.get("filename", "")))]
+    cleaned_data = [
+        e
+        for e in history_data
+        if os.path.exists(os.path.join(OUTPUT_DIR, e.get("filename", "")))
+    ]
     if len(cleaned_data) != len(history_data):
-        print(f"[INFO] history.json cleaned: {len(history_data) - len(cleaned_data)} stale entries removed")
-        with open(history_file, 'w', encoding='utf-8') as f:
+        print(
+            f"[INFO] history.json cleaned: {len(history_data) - len(cleaned_data)} stale entries removed"
+        )
+
+        with open(history_file, "w", encoding="utf-8") as f:
             json.dump(cleaned_data, f, ensure_ascii=False, indent=2)
         history_data = cleaned_data
-    
+
     for entry in history_data:
         filename = entry.get("filename", "")
         filepath = os.path.join(OUTPUT_DIR, filename)
-        
+
         if os.path.exists(filepath):
             stat = os.stat(filepath)
-            files.append({
-                "filename": filename,
-                "size": stat.st_size,
-                "created": stat.st_mtime,
-                "text": entry.get("text", "Unknown"),
-                "speaker": entry.get("speaker", "Unknown"),
-            })
+            files.append(
+                {
+                    "filename": filename,
+                    "size": stat.st_size,
+                    "created": stat.st_mtime,
+                    "text": entry.get("text", "Unknown"),
+                    "speaker": entry.get("speaker", "Unknown"),
+                }
+            )
     return jsonify({"files": files})
 
 
@@ -279,7 +312,7 @@ def play_audio(filename):
     """Play audio file."""
     filepath = os.path.join(OUTPUT_DIR, filename)
     if os.path.exists(filepath):
-        return send_file(filepath, mimetype='audio/wav')
+        return send_file(filepath, mimetype="audio/wav")
     return jsonify({"error": "File not found"}), 404
 
 
@@ -289,18 +322,20 @@ def delete_audio(filename):
     filepath = os.path.join(OUTPUT_DIR, filename)
     if os.path.exists(filepath):
         os.remove(filepath)
-        
+
         # Remove from history.json
         history_file = os.path.join(OUTPUT_DIR, "history.json")
         if os.path.exists(history_file):
-            with open(history_file, 'r', encoding='utf-8') as f:
+            with open(history_file, "r", encoding="utf-8") as f:
                 history_data = json.load(f)
-            
-            history_data = [entry for entry in history_data if entry.get("filename") != filename]
-            
-            with open(history_file, 'w', encoding='utf-8') as f:
+
+            history_data = [
+                entry for entry in history_data if entry.get("filename") != filename
+            ]
+
+            with open(history_file, "w", encoding="utf-8") as f:
                 json.dump(history_data, f, ensure_ascii=False, indent=2)
-        
+
         return jsonify({"success": True})
     return jsonify({"error": "File not found"}), 404
 
@@ -315,12 +350,6 @@ def get_output_size():
             if os.path.isfile(fp):
                 total_size += os.path.getsize(fp)
     return jsonify({"size": total_size})
-
-
-
-
-
-
 
 
 if __name__ == "__main__":
